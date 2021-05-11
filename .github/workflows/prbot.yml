@@ -58,6 +58,7 @@ jobs:
 
           # TODO: The data we're getting from the event_path file, can we access
           # instead via ${{ github.pull_request.blah }} etc?
+          repo=$(jq -r '.repository.full_name' ${GITHUB_EVENT_PATH})
           current_body=$(jq -r '.pull_request.body' ${GITHUB_EVENT_PATH})
           pr_number=$(jq -r '.pull_request.number' ${GITHUB_EVENT_PATH})
 
@@ -92,4 +93,4 @@ jobs:
           echo "Current directory is $(pwd)"
           pushd ../testproduct
           set -x
-          ./octokit.sh update_pull_request ${pr_number} body="${body}"
+          ./octokit.sh update_pull_request ${repo} ${pr_number} body="${body}"
