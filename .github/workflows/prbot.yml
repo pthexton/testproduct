@@ -17,8 +17,6 @@ jobs:
       #     echo "::set-output name=number::$(jq '.pull_request.number' ${GITHUB_EVENT_PATH})"
       #     echo "::set-output name=body::$(jq '.pull_request.body' ${GITHUB_EVENT_PATH})"
       - uses: actions/checkout@v2
-        with:
-          path: ./testproduct
       - name: event
         run: cat "${GITHUB_EVENT_PATH}"
       - name: Determine automation branch
@@ -78,9 +76,11 @@ jobs:
           new_body_lines+=("##### Automation branch: ${{ steps.automation.outputs.branch }}")
           new_body_lines+=("##### Features")
 
+          pushd testproduct-automation
           for feature in features/*.feature; do
             new_body_lines+=("- [x] ${feature}")
           done
+          popd
 
           new_body_lines+=("##### Hosts")
 
@@ -90,7 +90,4 @@ jobs:
 
           printf -v body "%s\n" "${new_body_lines[@]}"
 
-          echo "Current directory is $(pwd)"
-          pushd ../testproduct
-          set -x
           ./octokit.sh update_pull_request ${repo} ${pr_number} body="${body}"
