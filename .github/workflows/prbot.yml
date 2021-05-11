@@ -91,4 +91,5 @@ jobs:
 
           echo "Current directory is $(pwd)"
           pushd ../testproduct
+          set -x
           ./octokit.sh update_pull_request ${pr_number} body="${body}"
