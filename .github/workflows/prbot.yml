@@ -3,7 +3,9 @@ name: Pull Request Bot
 on:
   pull_request:
     branches: [main]
-    types: [opened]
+  pull_request_review_comment:
+    branches: [main]
+    types: [created]
 
 jobs:
   prbot:
@@ -24,6 +26,12 @@ jobs:
         run: |
           # Will be overridden if we find a previously changed value in the PR description body
           branch="main"
+
+          if [[ "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
+             echo "This is a PR comment"
+          else
+            echo "What is this? ${{ github.event_name }}"
+          fi
 
           current_body=$(jq '.pull_request.body' ${GITHUB_EVENT_PATH})
           while IFS= read -r line; do
