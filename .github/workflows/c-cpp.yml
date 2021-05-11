@@ -15,6 +15,10 @@ jobs:
     - uses: actions/checkout@v2
     - name: make
       run: make
+    - name: env
+      run: set
+    - name: event
+      run: cat "${GITHUB_EVENT_PATH}"
     - name: Upload Artifact
       uses: actions/upload-artifact@v2.2.3
       with:
