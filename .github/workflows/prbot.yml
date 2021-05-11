@@ -3,7 +3,7 @@ name: Pull Request Bot
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize]
+    types: [opened]
 
 jobs:
   prbot:
@@ -42,9 +42,9 @@ jobs:
       - name: Create PR Description
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
+        if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
         run: |
-          readonly automation_hosts=("macOS Mojave", "macOS Catalina", "macOS Big Sur", "macOS Beta")
+          readonly automation_hosts=("macOS Mojave" "macOS Catalina" "macOS Big Sur" "macOS Beta")
           # Helper for markdown checkboxes
           on_off() {
               case $1 in
