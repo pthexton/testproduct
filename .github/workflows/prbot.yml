@@ -40,6 +40,8 @@ jobs:
           path: ./testproduct-automation
 
       - name: Create PR Description
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
         run: |
           readonly automation_hosts=("macOS Mojave", "macOS Catalina", "macOS Big Sur", "macOS Beta")
