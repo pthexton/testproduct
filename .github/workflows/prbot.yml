@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: Pull Request Bot
 
 on:
   pull_request:
@@ -16,6 +16,9 @@ jobs:
       #   run: |
       #     echo "::set-output name=number::$(jq '.pull_request.number' ${GITHUB_EVENT_PATH})"
       #     echo "::set-output name=body::$(jq '.pull_request.body' ${GITHUB_EVENT_PATH})"
+      - uses: actions/checkout@v2
+        with:
+          path: ./testproduct
       - name: event
         run: cat "${GITHUB_EVENT_PATH}"
       - name: Determine automation branch
@@ -36,6 +39,8 @@ jobs:
         with:
           repository: "pthexton/testproduct-automation"
           ref: "${{ steps.automation.outputs.branch }}"
+          path: ./testproduct-automation
+
       - name: Create PR Description
         # if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
         run: |
@@ -85,4 +90,5 @@ jobs:
           printf -v body "%s\n" "${new_body_lines[@]}"
 
           echo "Current directory is $(pwd)"
+          pushd ../testproduct
           ./octokit.sh update_pull_request ${pr_number} body="${body}"
