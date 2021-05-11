@@ -37,7 +37,7 @@ jobs:
           repository: "pthexton/testproduct-automation"
           ref: "${{ steps.automation.outputs.branch }}"
       - name: Create PR Description
-        if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
+        # if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
         run: |
           readonly automation_hosts=("macOS Mojave", "macOS Catalina", "macOS Big Sur", "macOS Beta")
           # Helper for markdown checkboxes
