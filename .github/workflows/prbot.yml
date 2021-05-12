@@ -86,7 +86,7 @@ jobs:
               case $state in
                 "features")
                   if $(on_off "${tokens[1]}"); then
-                    enabled_features+=("${tokens[2]")
+                    enabled_features+=("${tokens[2]}")
                   fi
                   ;;
                 "hosts")
