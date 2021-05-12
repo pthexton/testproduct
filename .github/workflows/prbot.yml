@@ -75,7 +75,7 @@ jobs:
           printf -v body "%s\n" "${new_body_lines[@]}"
 
           ./octokit.sh update_pull_request ${REPO} ${PR_NUMBER} body="${body}"
-          ./octokit.sh add_comment ${REPO} ${PR_NUMBER} "Switched to branch ${BRANCH}\nComment with:\n> !auto run\n to start an automation run"
+          ./octokit.sh add_comment ${REPO} ${PR_NUMBER} "Switched to branch ${BRANCH}\nComment with:\n> !auto run\n\nto start an automation run"
   prbot-new_pr:
     name: Setup Automation Options
     runs-on: self-hosted
