@@ -35,7 +35,7 @@ jobs:
           current_body=$(jq '.pull_request.body' ${GITHUB_EVENT_PATH})
 
           command="${{ github.event.comment.body }}"
-          new_branch=$(basename "${command//" "/\/}")
+          new_branch=$(awk '{print $NF}' <<< "${command}")
           new_body_lines=()
 
           while IFS= read -r line; do
