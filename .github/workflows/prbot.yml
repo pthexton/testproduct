@@ -21,8 +21,10 @@ jobs:
       - name: Update automation branch
         id: automation
         if: startsWith(github.event.comment.body, '!auto branch')
+        env:
+          BODY: ${{ github.event.comment.body }}
         run: |
-          echo "::set-output name=branch::$(awk '{print $NF}' <<< "${{ github.event.comment.body }}")"
+          echo "::set-output name=branch::$(awk '{print $NF}' <<< "${BODY}")"
       - uses: actions/checkout@v2
         with:
           repository: "pthexton/testproduct-automation"
@@ -32,16 +34,15 @@ jobs:
         if: success()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BODY: ${{ github.event.issue.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          BRANCH: ${{ steps.automation.outputs.branch }}
         run: |
           # TODO: Find out if this can be a template yaml like in AzDO with template parameters
           # for the branch name, PR body, and PR number
           readonly automation_hosts=("macOS Mojave" "macOS Catalina" "macOS Big Sur" "macOS Beta")
-
-          # TODO: The data we're getting from the event_path file, can we access
-          # instead via ${{ github.pull_request.blah }} etc?
-          readonly repo='${{ github.repository }}'
-          readonly current_body='${{ github.event.issue.body }}'
-          readonly pr_number='${{ github.event.issue.number }}''
 
           new_body_lines=()
 
@@ -56,7 +57,7 @@ jobs:
           done <<< "${current_body}"
 
           new_body_lines+=("#### Automation Settings")
-          new_body_lines+=("##### Automation branch: ${{ steps.automation.outputs.branch }}")
+          new_body_lines+=("##### Automation branch: ${BRANCH}")
           new_body_lines+=("##### Features")
 
           pushd testproduct-automation
@@ -74,8 +75,7 @@ jobs:
           printf -v body "%s\n" "${new_body_lines[@]}"
 
           # add_comment someuser/somerepo 123 'This is a comment'
-          ./octokit.sh add_comment ${repo} ${{ github.event.comment.id }} 'Just testing this bit ...'
-
+          ./octokit.sh add_comment ${repo} ${COMMENT_ID} 'Just testing this bit ...'
 
           ./octokit.sh update_pull_request ${repo} ${pr_number} body="${body}"
   prbot-new_pr:
@@ -97,20 +97,15 @@ jobs:
       - name: Create PR Description
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
+          REPO: ${{ github.repository }}
+          BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        # if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
         run: |
+          set -x
           # TODO: Find out if this can be a template yaml like in AzDO with template parameters
           # for the branch name, PR body, and PR number
           readonly automation_hosts=("macOS Mojave" "macOS Catalina" "macOS Big Sur" "macOS Beta")
-
-          # TODO: The data we're getting from the event_path file, can we access
-          # instead via ${{ github.pull_request.blah }} etc?
-          readonly repo='${{ github.repository.full_name }}'
-          readonly current_body='${{ github.event.pull_request.body }}'
-          readonly pr_number='${{ github.event.pull_request.number }}''
-          # repo=$(jq -r '.repository.full_name' ${GITHUB_EVENT_PATH})
-          # current_body=$(jq -r '.pull_request.body' ${GITHUB_EVENT_PATH})
-          # pr_number=$(jq -r '.pull_request.number' ${GITHUB_EVENT_PATH})
 
           new_body_lines=()
 
@@ -122,16 +117,16 @@ jobs:
                   break
               fi
               new_body_lines+=("${line}")
-          done <<< "${current_body}"
+          done <<< "${BODY}"
 
           new_body_lines+=("#### Automation Settings")
           new_body_lines+=("##### Automation branch: main")
           new_body_lines+=("##### Features")
 
           pushd testproduct-automation
-          for feature in features/*.feature; do
-            new_body_lines+=("- [x] ${feature}")
-          done
+            for feature in features/*.feature; do
+              new_body_lines+=("- [x] ${feature}")
+            done
           popd
 
           new_body_lines+=("##### Hosts")
@@ -142,4 +137,4 @@ jobs:
 
           printf -v body "%s\n" "${new_body_lines[@]}"
 
-          ./octokit.sh update_pull_request ${repo} ${pr_number} body="${body}"
+          ./octokit.sh update_pull_request ${REPO} ${PR_NUMBER} body="${body}"
