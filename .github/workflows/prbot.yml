@@ -10,7 +10,7 @@ on:
 jobs:
   prbot-run-automation:
     name: Run Automation
-    if: contains(github.event.comment.html_url, '/pull/' & startsWith(github.event.comment.body, '!auto run'))
+    if: contains(github.event.comment.html_url, '/pull/' && startsWith(github.event.comment.body, '!auto run'))
     runs-on: self-hosted
     steps:
       - name: Dump GitHub context
