@@ -33,7 +33,7 @@ jobs:
               branch=$(awk '{print $NF}' <<< "${line}")
               echo "::set-output name=branch::${branch}"
             fi
-          done <<< "${BODY}"
+          done <<< "${BODY//$'\r'/}"
 
           if [[ "${branch}" == "unknown" ]]; then
             ./octokit.sh add_comment ${REPO} ${PR_NUMBER} "Unable to determine automation branch, cannot run integration tests"
@@ -105,7 +105,7 @@ jobs:
                 state="hosts"
                 ;;
             esac
-          done <<< "${BODY}"
+          done <<< "${BODY//$'\r'/}"
 
           new_comment=()
           new_comment+=("When fully implemented this bot will run automation with the following configuration")
@@ -183,9 +183,9 @@ jobs:
             new_body_lines+=("- [x] ${host}")
           done
 
-          printf -v body "%s\n" "${new_body_lines[@]}"
+          printf -v newbody "%s\n" "${new_body_lines[@]}"
 
-          ./octokit.sh update_pull_request ${REPO} ${PR_NUMBER} body="${body}"
+          ./octokit.sh update_pull_request ${REPO} ${PR_NUMBER} body="${newbody}"
           ./octokit.sh add_comment ${REPO} ${PR_NUMBER} "Switched to branch ${BRANCH}\nComment with:\n> !auto run\n\nto start an automation run"
   prbot-new_pr:
     name: Setup Automation Options
@@ -230,7 +230,7 @@ jobs:
               if [ -n "${line}" ]; then
                 new_body_lines+=("${line}")
               fi
-          done <<< "${BODY}"
+          done <<< "${BODY//$'\r'/}"
 
           new_body_lines+=("#### Automation Settings")
           new_body_lines+=("Change the selections with the tickboxes to run the most appropriate system integration tests for this PR build")
@@ -253,6 +253,6 @@ jobs:
             new_body_lines+=("- [x] ${host}")
           done
 
-          printf -v body "%s\n" "${new_body_lines[@]}"
+          printf -v newbody "%s\n" "${new_body_lines[@]}"
 
-          ./octokit.sh update_pull_request ${REPO} ${PR_NUMBER} body="${body}"
+          ./octokit.sh update_pull_request ${REPO} ${PR_NUMBER} body="${newbody}"
