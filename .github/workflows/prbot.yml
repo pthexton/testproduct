@@ -4,78 +4,113 @@ on:
   pull_request:
     branches: [main]
     types: [opened]
+  issue_comment:
+    types: [created]
 
 jobs:
-  prbot:
-    name: Automation Options
+  prbot-switch-branch:
+    name: PRBot Switch Branch
+    if: contains(github.event.comment.html_url, '/pull/') && startsWith(github.event.comment.body, '!auto branch')
     runs-on: self-hosted
-
     steps:
-      # - name: Get PR Info
-      #   id: pr_info
-      #   run: |
-      #     echo "::set-output name=number::$(jq '.pull_request.number' ${GITHUB_EVENT_PATH})"
-      #     echo "::set-output name=body::$(jq '.pull_request.body' ${GITHUB_EVENT_PATH})"
-      - uses: actions/checkout@v2
-      - name: event
-        run: cat "${GITHUB_EVENT_PATH}"
-      - name: Update automation branch
-        if: contains(github.event.comment.html_url, '/pull/') && startsWith(github.event.comment.body, '!auto branch')
+      - name: Dump GitHub context
         env:
           GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - uses: actions/checkout@v2
+      - name: Update automation branch
+        id: automation
+        if: startsWith(github.event.comment.body, '!auto branch')
         run: |
-          set -x
-          # Will be overridden if we find a previously changed value in the PR description body
-          branch="main"
-
-          echo "GitHub Context ="
-          jq <<< "${GITHUB_CONTEXT}"
-
-          current_body=$(jq '.pull_request.body' ${GITHUB_EVENT_PATH})
-
-          command="${{ github.event.comment.body }}"
-          new_branch=$(awk '{print $NF}' <<< "${command}")
-          new_body_lines=()
-
-          while IFS= read -r line; do
-              if [[ "${line}" == "##### Automation branch:"* ]]; then
-                new_body_lines+=("Automation branch: ${new_branch}")
-              else
-                new_body_lines+=("${line}")
-              fi
-          done <<< "${current_body}"
-
-          printf -v body "%s\n" "${new_body_lines[@]}"
-
-          ./octokit.sh update_pull_request ${repo} ${pr_number} body="${body}"
-
+          echo "::set-output name=branch::$(awk '{print $NF}' <<< "${{ github.event.comment.body }}")"
       - uses: actions/checkout@v2
         with:
           repository: "pthexton/testproduct-automation"
           ref: "${{ steps.automation.outputs.branch }}"
+          path: ./testproduct-automation
+      - name: Update PR Description
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # TODO: Find out if this can be a template yaml like in AzDO with template parameters
+          # for the branch name, PR body, and PR number
+          readonly automation_hosts=("macOS Mojave" "macOS Catalina" "macOS Big Sur" "macOS Beta")
+
+          # TODO: The data we're getting from the event_path file, can we access
+          # instead via ${{ github.pull_request.blah }} etc?
+          readonly repo='${{ github.repository }}'
+          readonly current_body='${{ github.event.issue.body }}'
+          readonly pr_number='${{ github.event.issue.number }}''
+
+          new_body_lines=()
+
+          state="description"
+
+          while IFS= read -r line; do
+              if [[ "${line}" == "#### Automation Settings"* ]]; then
+                  # We're going to rebuild the automation settings
+                  break
+              fi
+              new_body_lines+=("${line}")
+          done <<< "${current_body}"
+
+          new_body_lines+=("#### Automation Settings")
+          new_body_lines+=("##### Automation branch: ${{ steps.automation.outputs.branch }}")
+          new_body_lines+=("##### Features")
+
+          pushd testproduct-automation
+          for feature in features/*.feature; do
+            new_body_lines+=("- [x] ${feature}")
+          done
+          popd
+
+          new_body_lines+=("##### Hosts")
+
+          for host in "${automation_hosts[@]}"; do
+            new_body_lines+=("- [x] ${host}")
+          done
+
+          printf -v body "%s\n" "${new_body_lines[@]}"
+
+          # add_comment someuser/somerepo 123 'This is a comment'
+          ./octokit.sh add_comment ${repo} ${{ github.event.comment.id }} 'Just testing this bit ...'
+
+
+          ./octokit.sh update_pull_request ${repo} ${pr_number} body="${body}"
+  prbot-new_pr:
+    name: Setup Automation Options
+    runs-on: self-hosted
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - uses: actions/checkout@v2
+      - name: event
+        run: cat "${GITHUB_EVENT_PATH}"
+      - uses: actions/checkout@v2
+        with:
+          repository: "pthexton/testproduct-automation"
+          ref: "master"
           path: ./testproduct-automation
       - name: Create PR Description
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
         run: |
+          # TODO: Find out if this can be a template yaml like in AzDO with template parameters
+          # for the branch name, PR body, and PR number
           readonly automation_hosts=("macOS Mojave" "macOS Catalina" "macOS Big Sur" "macOS Beta")
-          # Helper for markdown checkboxes
-          on_off() {
-              case $1 in
-              "[x]")
-                  echo true
-                  return 0
-              esac
-              echo false
-              return 1
-          }
 
           # TODO: The data we're getting from the event_path file, can we access
           # instead via ${{ github.pull_request.blah }} etc?
-          repo=$(jq -r '.repository.full_name' ${GITHUB_EVENT_PATH})
-          current_body=$(jq -r '.pull_request.body' ${GITHUB_EVENT_PATH})
-          pr_number=$(jq -r '.pull_request.number' ${GITHUB_EVENT_PATH})
+          readonly repo='${{ github.repository.full_name }}'
+          readonly current_body='${{ github.event.pull_request.body }}'
+          readonly pr_number='${{ github.event.pull_request.number }}''
+          # repo=$(jq -r '.repository.full_name' ${GITHUB_EVENT_PATH})
+          # current_body=$(jq -r '.pull_request.body' ${GITHUB_EVENT_PATH})
+          # pr_number=$(jq -r '.pull_request.number' ${GITHUB_EVENT_PATH})
 
           new_body_lines=()
 
