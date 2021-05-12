@@ -3,7 +3,7 @@ name: Pull Request Bot
 on:
   pull_request:
     branches: [main]
-    types: [opened]
+    types: [opened, synchronize]
   issue_comment:
     types: [created]
 
@@ -99,6 +99,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
         run: |
+          set -x
           # TODO: Find out if this can be a template yaml like in AzDO with template parameters
           # for the branch name, PR body, and PR number
           readonly automation_hosts=("macOS Mojave" "macOS Catalina" "macOS Big Sur" "macOS Beta")
