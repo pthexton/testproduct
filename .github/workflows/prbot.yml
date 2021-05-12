@@ -92,7 +92,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           repository: "pthexton/testproduct-automation"
-          ref: "master"
+          ref: "main"
           path: ./testproduct-automation
       - name: Create PR Description
         env:
@@ -125,7 +125,7 @@ jobs:
           done <<< "${current_body}"
 
           new_body_lines+=("#### Automation Settings")
-          new_body_lines+=("##### Automation branch: master")
+          new_body_lines+=("##### Automation branch: main")
           new_body_lines+=("##### Features")
 
           pushd testproduct-automation
