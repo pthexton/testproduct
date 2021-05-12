@@ -4,19 +4,8 @@ on:
   pull_request:
     branches: [main]
     types: [opened]
-  issue_comment:
-    types: [created, edited, deleted]
 
 jobs:
-  switch-auto-branch:
-    name: Switch Automation Branch
-    runs-on: self-hosted
-    if: contains(github.event.comment.html_url, '/pull/') && contains(github.event.comment.body, 'commenttest')
-    steps:
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
   prbot:
     name: Automation Options
     runs-on: self-hosted
