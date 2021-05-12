@@ -8,6 +8,118 @@ on:
     types: [created]
 
 jobs:
+  prbot-run-automation:
+    name: Run Automation
+    if: contains(github.event.comment.html_url, '/pull/' & startsWith(github.event.comment.body, '!auto run'))
+    runs-on: self-hosted
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "${GITHUB_CONTEXT}"
+      - uses: actions/checkout@v2
+      - name: Get selected automation branch name
+        id: automation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BODY: ${{ github.event.issue.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          branch="unknown"
+
+          while IFS= read -r line; do
+            if [[ "${line}" == "##### Automation branch:"* ]]; then
+              branch=$(awk '{print $NF}' <<< "${line}")
+              echo "::set-output name=branch::${branch}"
+            fi
+          done <<< "${BODY}"
+
+          if [[ "${branch}" == "unknown" ]]; then
+            ./octokit.sh add_comment ${REPO} ${PR_NUMBER} "Unable to determine automation branch, cannot run integration tests"
+            exit 1
+          fi
+      - name: Ensure automation branch exists
+        uses: actions/checkout@v2
+        with:
+          repository: "pthexton/testproduct-automation"
+          ref: "${{ steps.automation.outputs.branch }}"
+          path: ./testproduct-automation
+      - name: Do the run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BODY: ${{ github.event.issue.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          # Helper to determine whether a markdown checkbox is enabled
+          on_off() {
+            case $1 in
+              "[x]")
+                echo true
+                return 0
+            esac
+            echo false
+            return 1
+          }
+
+          set -x
+
+          build_details_url=$(jq -r '.statusCheckRollup[] |
+            select(.name=="build") |
+            .detailsUrl' \
+            <<< "$(gh pr view ${PR_NUMBER} --json statusCheckRollup)")
+          echo "Got build details url ${build_details_url}"
+          run_number=$(basename "${build_details_url}")
+          echo "Got run number ${run_number}"
+          run_id=$(jq '.run_id' <<< "$(gh api repos/${REPO}/actions/jobs/${run_number})")
+          echo "Got run_id ${run_id}"
+
+          enabled_features=()
+          enabled_hosts=()
+
+          state="description"
+          while IFS= read -r line; do
+            read -r -a tokens <<< "${line//"[ ]"/[]}"
+
+            if [[ "${line}" != "##"* ]]; then
+              case $state in
+                "features")
+                  if $(on_off "${tokens[1]}"); then
+                    enabled_features+=("${tokens[2]")
+                  fi
+                  ;;
+                "hosts")
+                  if $(on_off "${tokens[1]}"); then
+                    enabled_hosts+=("${tokens[2]}")
+                  fi
+                  ;;
+              esac
+            fi
+
+            case $line in
+              "##### Features")
+                state="features"
+                ;;
+              "##### Hosts")
+                state="hosts"
+                ;;
+            esac
+          done <<< "${BODY}"
+
+          new_comment=()
+          new_comment+=("When fully implemented this bot will run automation with the following configuration")
+          new_comment+=("Download the PR build with run_id ${run_id}, determined from the workflow id ${run_number}")
+          new_comment+=("Trigger the automation workflow with the following Settings")
+          new_comment+=("Enabled features")
+          new_comment+=(${enabled_features[@]})
+          new_comment+=("Enabled Hosts")
+          new_comment+=(${enabled_hosts[@]})
+
+          printf -v comment "%s\n" "${new_comment[@]}"
+
+          ./octokit.sh add_comment ${REPO} ${PR_NUMBER} "${comment}"
+
   prbot-switch-branch:
     name: PRBot Switch Branch
     if: contains(github.event.comment.html_url, '/pull/') && startsWith(github.event.comment.body, '!auto branch')
@@ -20,7 +132,6 @@ jobs:
       - uses: actions/checkout@v2
       - name: Update automation branch
         id: automation
-        if: startsWith(github.event.comment.body, '!auto branch')
         env:
           BODY: ${{ github.event.comment.body }}
         run: |
