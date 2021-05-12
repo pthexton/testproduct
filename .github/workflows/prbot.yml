@@ -225,11 +225,7 @@ jobs:
                   # We're going to rebuild the automation settings
                   break
               fi
-              # TODO: Using the shell based octokit client we get a 400 response if the new
-              # description has an empty line
-              if [ -n "${line}" ]; then
-                new_body_lines+=("${line}")
-              fi
+              new_body_lines+=("${line}")
           done <<< "${BODY//$'\r'/}"
 
           new_body_lines+=("#### Automation Settings")
