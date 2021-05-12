@@ -74,13 +74,12 @@ jobs:
 
           printf -v body "%s\n" "${new_body_lines[@]}"
 
-          # add_comment someuser/somerepo 123 'This is a comment'
-          ./octokit.sh add_comment ${repo} ${COMMENT_ID} 'Just testing this bit ...'
-
+          ./octokit.sh close_issue ${repo} ${COMMENT_ID}
           ./octokit.sh update_pull_request ${repo} ${pr_number} body="${body}"
   prbot-new_pr:
     name: Setup Automation Options
     runs-on: self-hosted
+    if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
     steps:
       - name: Dump GitHub context
         env:
@@ -100,7 +99,6 @@ jobs:
           REPO: ${{ github.repository }}
           BODY: ${{ github.event.pull_request.body }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        # if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
         run: |
           set -x
           # TODO: Find out if this can be a template yaml like in AzDO with template parameters
