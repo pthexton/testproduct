@@ -19,26 +19,41 @@ jobs:
       - uses: actions/checkout@v2
       - name: event
         run: cat "${GITHUB_EVENT_PATH}"
-      - name: Determine automation branch
-        id: automation
+      - name: Update automation branch
+        if: contains(github.event.comment.html_url, '/pull/') && startsWith(github.event.comment.body, '!auto branch')
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
         run: |
+          set -x
           # Will be overridden if we find a previously changed value in the PR description body
           branch="main"
 
+          echo "GitHub Context ="
+          jq <<< "${GITHUB_CONTEXT}"
+
           current_body=$(jq '.pull_request.body' ${GITHUB_EVENT_PATH})
+
+          command="${{ github.event.comment.body }}"
+          new_branch=$(awk '{print $NF}' <<< "${command}")
+          new_body_lines=()
+
           while IFS= read -r line; do
               if [[ "${line}" == "##### Automation branch:"* ]]; then
-                branch=$(basename "${line//" "/\/}")
+                new_body_lines+=("Automation branch: ${new_branch}")
+              else
+                new_body_lines+=("${line}")
               fi
           done <<< "${current_body}"
 
-          echo "::set-output name=branch::${branch}"
+          printf -v body "%s\n" "${new_body_lines[@]}"
+
+          ./octokit.sh update_pull_request ${repo} ${pr_number} body="${body}"
+
       - uses: actions/checkout@v2
         with:
           repository: "pthexton/testproduct-automation"
           ref: "${{ steps.automation.outputs.branch }}"
           path: ./testproduct-automation
-
       - name: Create PR Description
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -75,7 +90,7 @@ jobs:
           done <<< "${current_body}"
 
           new_body_lines+=("#### Automation Settings")
-          new_body_lines+=("##### Automation branch: ${{ steps.automation.outputs.branch }}")
+          new_body_lines+=("##### Automation branch: master")
           new_body_lines+=("##### Features")
 
           pushd testproduct-automation
