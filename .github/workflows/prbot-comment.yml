@@ -1,13 +1,17 @@
 name: commentcheck
 on:
   issue_comment:
-    types: [created, edited, deleted]
+    types: [created]
 
 jobs:
   job01:
-    if: contains(github.event.issue, 'pull_request') && contains(github.event.comment.body, 'commenttest')
+    if: contains(github.event.comment.html_url, '/pull/') && contains(github.event.comment.body, 'commenttest')
     runs-on: self-hosted
     steps:
+      - name: Dump issue
+        env:
+          GITHUB_ISSUE_CONTEXT: ${{ toJson(github.event.issue) }}
+        run: echo "$GITHUB_ISSUE_CONTEXT"
       - name: Dump GitHub context
         env:
           GITHUB_CONTEXT: ${{ toJson(github) }}
