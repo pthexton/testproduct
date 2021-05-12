@@ -97,7 +97,7 @@ jobs:
       - name: Create PR Description
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository.full_name }}
+          REPO: ${{ github.repository }}
           BODY: ${{ github.event.pull_request.body }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         # if: ${{ github.event_name == 'pull_request' && github.event.action == 'opened' }}
