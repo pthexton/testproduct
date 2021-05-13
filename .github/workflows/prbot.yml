@@ -165,9 +165,11 @@ jobs:
                   break
               fi
               new_body_lines+=("${line}")
-          done <<< "${current_body}"
+          done <<< "${BODY//$'\r'/}"
 
           new_body_lines+=("#### Automation Settings")
+          new_body_lines+=("<details>")
+          new_body_lines+=("<summary>Click to expand</summary>")
           new_body_lines+=("##### Automation branch: ${BRANCH}")
           new_body_lines+=("##### Features")
 
@@ -182,6 +184,8 @@ jobs:
           for host in "${automation_hosts[@]}"; do
             new_body_lines+=("- [x] ${host}")
           done
+
+          new_body_lines+=("</details>")
 
           printf -v newbody "%s\n" "${new_body_lines[@]}"
 
@@ -229,6 +233,8 @@ jobs:
           done <<< "${BODY//$'\r'/}"
 
           new_body_lines+=("#### Automation Settings")
+          new_body_lines+=("<details>")
+          new_body_lines+=("<summary>Click to expand</summary>")
           new_body_lines+=("Change the selections with the tickboxes to run the most appropriate system integration tests for this PR build")
           new_body_lines+=("To switch the automation branch used add a comment as follows")
           new_body_lines+=("> !auto branch ref/spec\n")
@@ -248,6 +254,8 @@ jobs:
           for host in "${automation_hosts[@]}"; do
             new_body_lines+=("- [x] ${host}")
           done
+
+          new_body_lines+=("</details>")
 
           printf -v newbody "%s\n" "${new_body_lines[@]}"
 
