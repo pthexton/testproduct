@@ -193,7 +193,7 @@ jobs:
           new_body_lines+=("</details>")
 
           printf -v newbody "%s\n" "${new_body_lines[@]}"
-
+          set -x
           ./octokit.sh update_pull_request ${REPO} ${PR_NUMBER} body="${newbody}"
           ./octokit.sh add_comment ${REPO} ${PR_NUMBER} "Switched to branch ${BRANCH}\nComment with:\n> !auto run\n\nto start an automation run"
   prbot-new_pr:
